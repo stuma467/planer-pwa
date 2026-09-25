@@ -316,3 +316,71 @@ main{flex:1;min-height:0;position:relative;}
   box-shadow:0 10px 30px -10px rgba(0,0,0,.8);
 }
 #toast.show{opacity:1;transform:translate(-50%,0);}
+
+/* ---------- редактор: время и календарь ---------- */
+.ed-row{
+  align-items:flex-start;   /* галочка и крестик — по верху */
+  padding:10px 8px 10px 13px;
+}
+.ed-check, .ed-del{
+  margin-top:4px;
+}
+.ed-fields{
+  flex:1;min-width:0;
+  display:flex;flex-direction:column;gap:2px;
+}
+.ed-input{
+  padding:2px 0;
+  width:100%;
+}
+.ed-meta{
+  display:flex;align-items:center;gap:6px;
+  flex-wrap:wrap;
+}
+.ed-time{
+  background:transparent;border:none;outline:none;
+  color:var(--muted);font-size:12.5px;
+  padding:3px 6px;border-radius:7px;
+  font-family:inherit;
+  -webkit-appearance:none;
+  appearance:none;
+  min-width:0;
+}
+.ed-time:focus{color:var(--text);background:rgba(255,255,255,.05);}
+.ed-cal{
+  font-size:11.5px;font-weight:600;
+  color:var(--accent);
+  padding:4px 9px;border-radius:8px;
+  background:rgba(79,140,255,.12);
+  transition:background .15s;
+  white-space:nowrap;
+}
+.ed-cal:active{background:rgba(79,140,255,.25);}
+
+/* бейдж времени на странице «Сегодня» */
+.t-time{
+  display:inline-block;
+  font-size:12px;font-weight:700;
+  color:var(--accent);
+  background:rgba(79,140,255,.14);
+  padding:2px 7px;border-radius:7px;
+  margin-right:6px;
+  vertical-align:1px;
+}
+
+/* время в карточках недели */
+.dc-time{
+  color:var(--accent);
+  font-weight:700;
+  margin-right:2px;
+}
+
+.add-time{
+  width:86px;height:46px;border-radius:14px;flex:none;
+  background:var(--card);border:1px solid var(--border);
+  color:var(--text);padding:0 8px;font-size:14px;
+  font-family:inherit;text-align:center;
+  outline:none;min-width:0;
+  color-scheme:dark;             /* тёмный нативный пикер iOS */
+}
+.add-time:focus{border-color:var(--accent);}

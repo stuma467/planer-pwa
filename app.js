@@ -51,7 +51,28 @@ function plural(n, one, few, many){
   return many;
 }
 function dayIndex(d){ return (d.getDay() + 6) % 7; }
+/* ---------- сортировка дел ----------
+   1) невыполненные — сверху
+   2) со временем — выше, без времени — в конце
+   3) раньше по времени — выше
+   4) иначе — как добавили
+*/
+function sortTasks(tasks){
+  return tasks.slice().sort(function(a, b){
+    const d = (a.done ? 1 : 0) - (b.done ? 1 : 0);
+    if (d !== 0) return d;
 
+    const at = a.time ? 0 : 1;
+    const bt = b.time ? 0 : 1;
+    if (at !== bt) return at - bt;
+
+    if (a.time && b.time){
+      if (a.time < b.time) return -1;
+      if (a.time > b.time) return 1;
+    }
+    return 0;
+  });
+}
 /* ---------- storage ---------- */
 function load(){
   try{
@@ -60,8 +81,21 @@ function load(){
     const parsed = JSON.parse(raw);
     if (parsed && typeof parsed === "object" && parsed.days && typeof parsed.days === "object"){
       data = parsed;
+      migrateData();
     }
   }catch(e){ console.warn("load error", e); }
+}
+
+function migrateData(){
+  if (!data || !data.days) return;
+  Object.keys(data.days).forEach(function(k){
+    const day = data.days[k];
+    if (!day || !Array.isArray(day.tasks)) return;
+    day.tasks.forEach(function(t){
+      if (!t.id) t.id = uid();
+      if (typeof t.time === "undefined") t.time = null;   // ← новая опция
+    });
+  });
 }
 function save(){
   try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
@@ -115,7 +149,7 @@ function renderWeek(){
     card.type = "button";
     card.className = "day-card" + (k === todayKey ? " today" : "") + (i === 6 ? " wide" : "");
 
-    const shown = tasks.slice(0, MAX_TASKS_IN_CARD);
+    const shown = sortTasks(tasks).slice(0, MAX_TASKS_IN_CARD);
     const rest = tasks.length - shown.length;
 
     let html = '<div class="dc-head">' +
@@ -128,7 +162,8 @@ function renderWeek(){
     } else {
       for (let j = 0; j < shown.length; j++){
         const t = shown[j];
-        html += '<div class="dc-task' + (t.done ? " done" : "") + '">' + esc(t.text) + '</div>';
+        const timePrefix = t.time ? '<span class="dc-time">' + esc(t.time) + '</span> ' : '';
+html += '<div class="dc-task' + (t.done ? " done" : "") + '">' + timePrefix + esc(t.text) + '</div>';
       }
       if (rest > 0){
         html += '<div class="dc-more">ещё ' + rest + ' ' + plural(rest, "дело", "дела", "дел") + '</div>';
@@ -172,24 +207,25 @@ function renderToday(){
     return;
   }
 
-  const sorted = tasks.slice().sort(function(a, b){
-    return (a.done ? 1 : 0) - (b.done ? 1 : 0);
-  });
+  const sorted = sortTasks(tasks);
 
   sorted.forEach(function(t){
-    const row = document.createElement("div");
-    row.className = "t-item" + (t.done ? " done" : "");
-    row.innerHTML =
-      '<div class="t-check"></div>' +
-      '<div class="t-text">' + esc(t.text) + '</div>';
-    row.addEventListener("click", function(){
-      t.done = !t.done;
-      save();
-      renderToday();
-      renderWeek();
-    });
-    list.appendChild(row);
+  const row = document.createElement("div");
+  row.className = "t-item" + (t.done ? " done" : "");
+  const timeBadge = t.time
+    ? '<span class="t-time">' + esc(t.time) + '</span>'
+    : '';
+  row.innerHTML =
+    '<div class="t-check"></div>' +
+    '<div class="t-text">' + timeBadge + esc(t.text) + '</div>';
+  row.addEventListener("click", function(){
+    t.done = !t.done;
+    save();
+    renderToday();
+    renderWeek();
   });
+  list.appendChild(row);
+});
 }
 
 function renderAll(){
@@ -228,10 +264,13 @@ function renderEditorTasks(){
     return;
   }
 
-  tasks.forEach(function(t, idx){
+  const sorted = sortTasks(tasks);
+
+  sorted.forEach(function(t){
     const row = document.createElement("div");
     row.className = "ed-row" + (t.done ? " done" : "");
 
+    /* галочка */
     const chk = document.createElement("button");
     chk.type = "button";
     chk.className = "ed-check";
@@ -242,6 +281,10 @@ function renderEditorTasks(){
       renderWeek();
       renderToday();
     });
+
+    /* текст + время */
+    const fields = document.createElement("div");
+    fields.className = "ed-fields";
 
     const inp = document.createElement("input");
     inp.type = "text";
@@ -257,17 +300,47 @@ function renderEditorTasks(){
       renderToday();
     });
 
+    const meta = document.createElement("div");
+    meta.className = "ed-meta";
+
+    const timeInp = document.createElement("input");
+    timeInp.type = "time";
+    timeInp.className = "ed-time";
+    timeInp.value = t.time || "";
+    timeInp.addEventListener("change", function(){
+      t.time = timeInp.value || null;
+      save();
+      renderEditorTasks();   // пересортировать
+      renderWeek();
+      renderToday();
+    });
+
+    const calBtn = document.createElement("button");
+    calBtn.type = "button";
+    calBtn.className = "ed-cal";
+    calBtn.textContent = "📅 В календарь";
+    calBtn.addEventListener("click", function(){
+      if (!t.text.trim()){ toast("Сначала введите текст дела"); return; }
+      addToCalendar(t, editingKey);
+    });
+
+    meta.appendChild(timeInp);
+    meta.appendChild(calBtn);
+    fields.appendChild(inp);
+    fields.appendChild(meta);
+
+    /* удалить — ищем индекс в оригинальном массиве */
     const del = document.createElement("button");
     del.type = "button";
     del.className = "ed-del";
     del.textContent = "✕";
     del.addEventListener("click", function(){
-      const task = tasks[idx];
-      if (!task) return;
-      const label = task.text ? '«' + task.text + '»' : 'это дело';
+      const i = tasks.indexOf(t);
+      if (i === -1) return;
+      const label = t.text ? '«' + t.text + '»' : 'это дело';
       if (!confirm("Удалить " + label + "?")) return;
 
-      tasks.splice(idx, 1);
+      tasks.splice(i, 1);
       save();
       renderEditorTasks();
       renderWeek();
@@ -275,20 +348,23 @@ function renderEditorTasks(){
     });
 
     row.appendChild(chk);
-    row.appendChild(inp);
+    row.appendChild(fields);
     row.appendChild(del);
     box.appendChild(row);
   });
 }
 function addTaskToEditor(){
   const input = document.getElementById("editorAddInput");
+  const timeInput = document.getElementById("editorAddTime");
   const text = input.value.trim();
   if (!text || !editingKey) return;
 
+  const time = timeInput.value || null;
   const day = getDay(editingKey, true);
-  day.tasks.push({ id: uid(), text: text, done: false });
+  day.tasks.push({ id: uid(), text: text, time: time, done: false });
   save();
   input.value = "";
+  timeInput.value = "";
   renderEditorTasks();
   renderWeek();
   renderToday();
@@ -297,7 +373,96 @@ function addTaskToEditor(){
   box.scrollTop = box.scrollHeight;
   input.focus();
 }
+/* ---------- calendar (.ics) ---------- */
+function pad2(n){ return String(n).padStart(2, "0"); }
 
+function icsEscape(str){
+  return String(str)
+    .replace(/\\/g, "\\\\")
+    .replace(/\r?\n/g, "\\n")
+    .replace(/,/g, "\\,")
+    .replace(/;/g, "\\;");
+}
+
+function buildICS(task, dateKey){
+  const d = parseKey(dateKey);
+  const next = addDays(d, 1);
+  const now = new Date();
+  const stamp =
+    now.getUTCFullYear() + pad2(now.getUTCMonth() + 1) + pad2(now.getUTCDate()) +
+    "T" + pad2(now.getUTCHours()) + pad2(now.getUTCMinutes()) + pad2(now.getUTCSeconds()) + "Z";
+
+  const ymd     = d.getFullYear()     + pad2(d.getMonth() + 1)     + pad2(d.getDate());
+  const nextYmd = next.getFullYear()  + pad2(next.getMonth() + 1)  + pad2(next.getDate());
+
+  const summary = "Планер: " + task.text;
+  const escSum  = icsEscape(summary);
+
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Weekly Planner//RU",
+    "CALSCALE:GREGORIAN",
+    "BEGIN:VEVENT",
+    "UID:" + (task.id || uid()) + "@weekly-planner",
+    "DTSTAMP:" + stamp
+  ];
+
+  if (task.time){
+    // timed event — 1 час по умолчанию
+    const parts = task.time.split(":");
+    const hh = Number(parts[0]) || 0;
+    const mm = Number(parts[1]) || 0;
+    const endH = (hh + 1) % 24;
+    const endD = (hh + 1 >= 24) ? nextYmd : ymd;
+    lines.push("DTSTART:" + ymd + "T" + pad2(hh) + pad2(mm) + "00");
+    lines.push("DTEND:"   + endD + "T" + pad2(endH) + pad2(mm) + "00");
+  } else {
+    // all-day event
+    lines.push("DTSTART;VALUE=DATE:" + ymd);
+    lines.push("DTEND;VALUE=DATE:"   + nextYmd);
+  }
+
+  lines.push("SUMMARY:"     + escSum);
+  lines.push("DESCRIPTION:" + escSum);
+
+  if (task.time){
+    // напоминание за 15 минут до начала (только для событий со временем)
+    lines.push("BEGIN:VALARM");
+    lines.push("TRIGGER:-PT15M");
+    lines.push("ACTION:DISPLAY");
+    lines.push("DESCRIPTION:" + escSum);
+    lines.push("END:VALARM");
+  }
+
+  lines.push("END:VEVENT");
+  lines.push("END:VCALENDAR");
+
+  // RFC 5545 — переводы строк обязательно CRLF
+  return lines.join("\r\n") + "\r\n";
+}
+
+function addToCalendar(task, dateKey){
+  try{
+    const ics = buildICS(task, dateKey);
+    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+
+    const safeName = (task.text.slice(0, 30).replace(/[\\/:*?"<>|]/g, "").trim() || "event");
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = safeName + ".ics";
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 3000);
+    toast("Файл .ics сохранён — откройте его в «Файлах»");
+  }catch(e){
+    alert("Не удалось создать событие: " + e.message);
+  }
+}
 /* ---------- backup ---------- */
 function openBackup(){
   document.getElementById("backupText").value = JSON.stringify(data, null, 2);
@@ -348,6 +513,7 @@ function restoreBackup(){
   if (!confirm("Заменить все текущие данные данными из бэкапа?")) return;
 
   data = parsed;
+  migrateData();
   Object.keys(data.days).forEach(function(k){
     if (!data.days[k] || !Array.isArray(data.days[k].tasks)) data.days[k] = { tasks: [] };
   });
@@ -391,16 +557,19 @@ function bindEvents(){
   });
 
   const tAdd = document.getElementById("todayAddInput");
-  document.getElementById("todayAddBtn").addEventListener("click", function(){
-    const text = tAdd.value.trim();
-    if (!text) return;
-    const day = getDay(keyOf(new Date()), true);
-    day.tasks.push({ id: uid(), text: text, done: false });
-    save();
-    tAdd.value = "";
-    renderToday();
-    renderWeek();
-  });
+  const tTime = document.getElementById("todayAddTime");
+document.getElementById("todayAddBtn").addEventListener("click", function(){
+  const text = tAdd.value.trim();
+  if (!text) return;
+  const time = tTime.value || null;
+  const day = getDay(keyOf(new Date()), true);
+  day.tasks.push({ id: uid(), text: text, time: time, done: false });
+  save();
+  tAdd.value = "";
+  tTime.value = "";
+  renderToday();
+  renderWeek();
+});
   tAdd.addEventListener("keydown", function(e){
     if (e.key === "Enter"){ e.preventDefault(); document.getElementById("todayAddBtn").click(); }
   });

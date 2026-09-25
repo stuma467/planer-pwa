@@ -32,9 +32,10 @@
       </div>
       <div class="scroll" id="todayList"></div>
       <div class="add-bar">
-        <input type="text" id="todayAddInput" placeholder="Новое дело на сегодня…" autocomplete="off" autocorrect="off">
-        <button class="add-btn" id="todayAddBtn" aria-label="Добавить">+</button>
-      </div>
+  <input type="text" id="todayAddInput" placeholder="Новое дело на сегодня…" autocomplete="off" autocorrect="off">
+  <input type="time" id="todayAddTime" class="add-time" aria-label="Время (необязательно)">
+  <button class="add-btn" id="todayAddBtn" aria-label="Добавить">+</button>
+</div>
     </section>
 
     <section class="view" id="viewWeek">
@@ -61,9 +62,10 @@
   </div>
   <div class="ov-body" id="editorTasks"></div>
   <div class="ov-add">
-    <input type="text" id="editorAddInput" placeholder="Новое дело…" autocomplete="off" autocorrect="off">
-    <button class="add-btn" id="editorAddBtn" aria-label="Добавить">+</button>
-  </div>
+  <input type="text" id="editorAddInput" placeholder="Новое дело…" autocomplete="off" autocorrect="off">
+  <input type="time" id="editorAddTime" class="add-time" aria-label="Время (необязательно)">
+  <button class="add-btn" id="editorAddBtn" aria-label="Добавить">+</button>
+</div>
 </div>
 
 <div class="overlay" id="backupOverlay">
