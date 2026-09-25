@@ -654,13 +654,26 @@ function makeAppleIcon(){
 function registerSW(){
   if ("serviceWorker" in navigator && location.protocol.startsWith("http")){
     window.addEventListener("load", function(){
-      navigator.serviceWorker.register("./sw.js").catch(function(err){
-        console.warn("SW registration failed:", err);
-      });
+      navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" })
+  .then(function(reg){
+    // принудительно проверяем обновление при каждом запуске приложения
+    reg.update().catch(function(){});
+  })
+  .catch(function(err){
+    console.warn("SW registration failed:", err);
+  });
     });
   }
 }
-
+function watchSWUpdates(){
+  if (!("serviceWorker" in navigator)) return;
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener("controllerchange", function(){
+    if (refreshing) return;
+    refreshing = true;
+    window.location.reload();
+  });
+}
 /* ---------- boot ---------- */
 function boot(){
   load();
@@ -669,6 +682,7 @@ function boot(){
   bindEvents();
   switchView("week");
   registerSW();
+  watchSWUpdates();
 }
 if (document.readyState === "loading"){
   document.addEventListener("DOMContentLoaded", boot);
