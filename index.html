@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Планер">
+<meta name="theme-color" content="#0e1116">
+<meta name="format-detection" content="telephone=no">
+<title>Планер</title>
+<link rel="manifest" href="./manifest.json">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+<div class="app">
+  <header class="topbar">
+    <div class="topbar-title" id="topTitle">Сегодня</div>
+    <button class="icon-btn" id="backupBtn" aria-label="Резервная копия">⇅</button>
+  </header>
+
+  <main>
+    <section class="view active" id="viewToday">
+      <div class="today-head">
+        <div style="flex:1;min-width:0">
+          <div class="today-date" id="todayDate">—</div>
+          <div class="today-sub" id="todaySub">—</div>
+        </div>
+        <button class="icon-btn small" id="editTodayBtn" aria-label="Редактировать день">✎</button>
+      </div>
+      <div class="scroll" id="todayList"></div>
+      <div class="add-bar">
+        <input type="text" id="todayAddInput" placeholder="Новое дело на сегодня…" autocomplete="off" autocorrect="off">
+        <button class="add-btn" id="todayAddBtn" aria-label="Добавить">+</button>
+      </div>
+    </section>
+
+    <section class="view" id="viewWeek">
+      <div class="week-nav">
+        <button class="nav-btn" id="prevWeek" aria-label="Предыдущая неделя">‹</button>
+        <button class="week-label" id="weekLabel">—</button>
+        <button class="nav-btn" id="nextWeek" aria-label="Следующая неделя">›</button>
+      </div>
+      <div class="week-grid" id="weekGrid"></div>
+    </section>
+  </main>
+
+  <nav class="tabbar">
+    <button class="tab" data-view="today">Сегодня</button>
+    <button class="tab active" data-view="week">Неделя</button>
+  </nav>
+</div>
+
+<div class="overlay" id="editorOverlay">
+  <div class="ov-header">
+    <button class="icon-btn" id="editorClose" aria-label="Закрыть">✕</button>
+    <div class="ov-title" id="editorTitle"></div>
+    <div class="ov-spacer"></div>
+  </div>
+  <div class="ov-body" id="editorTasks"></div>
+  <div class="ov-add">
+    <input type="text" id="editorAddInput" placeholder="Новое дело…" autocomplete="off" autocorrect="off">
+    <button class="add-btn" id="editorAddBtn" aria-label="Добавить">+</button>
+  </div>
+</div>
+
+<div class="overlay" id="backupOverlay">
+  <div class="ov-header">
+    <button class="icon-btn" id="backupClose" aria-label="Закрыть">✕</button>
+    <div class="ov-title">Резервная копия</div>
+    <div class="ov-spacer"></div>
+  </div>
+  <div class="ov-body col">
+    <div class="hint">
+      Данные хранятся только в этом браузере. Если очистить Safari — всё пропадёт.
+      Скопируйте текст и сохраните его в «Заметках» или скачайте файлом.
+    </div>
+    <textarea class="ov-textarea" id="backupText" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea>
+    <div class="btn-row">
+      <button class="btn" id="copyBackup">Скопировать</button>
+      <button class="btn" id="downloadBackup">Скачать файл</button>
+    </div>
+    <div class="btn-row">
+      <button class="btn" id="loadFileBtn">Загрузить файл</button>
+      <button class="btn primary" id="restoreBackup">Восстановить</button>
+    </div>
+    <div class="hint">«Восстановить» применит JSON из поля выше (можно просто вставить текст).</div>
+    <input type="file" id="fileInput" accept=".json,application/json" hidden>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="./app.js"></script>
+</body>
+</html>
